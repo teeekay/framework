@@ -107,6 +107,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Encryption Encapsulation
+    |--------------------------------------------------------------------------
+    |
+    | This option enables Laravel to serialize encrypted values using Google's
+    | Protocol Buffers (protobuf).  By default encrypted values are base64
+    | encoded, and serialized in JSON which is base64 encoded.  This double
+    | application of base64 encoding inflates the size of the encoded object by
+    | approximately 1.78 times. Using protobuf eliminates this size increase.
+    |
+    */
+
+    'encryption_with_protobuf' => (bool) env('APP_ENCRYPTION_WITH_PROTOBUF', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Maintenance Mode Driver
     |--------------------------------------------------------------------------
     |

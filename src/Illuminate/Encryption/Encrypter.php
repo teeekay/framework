@@ -2,6 +2,7 @@
 
 namespace Illuminate\Encryption;
 
+use Encapsulations\EncryptedField;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Contracts\Encryption\Encrypter as EncrypterContract;
 use Illuminate\Contracts\Encryption\EncryptException;
@@ -32,6 +33,13 @@ class Encrypter implements EncrypterContract, StringEncrypter
     protected $cipher;
 
     /**
+     * Is google protobuf used to encapsulate data instead of base64/json.
+     *
+     * @var boolean
+     */
+    protected $protobuf;
+
+    /**
      * The supported cipher algorithms and their properties.
      *
      * @var array
@@ -48,10 +56,11 @@ class Encrypter implements EncrypterContract, StringEncrypter
      *
      * @param  string  $key
      * @param  string  $cipher
+     * @param  boolean  $protobuf
      *
      * @throws \RuntimeException
      */
-    public function __construct($key, $cipher = 'aes-128-cbc')
+    public function __construct($key, $cipher = 'aes-128-cbc', bool $protobuf = false)
     {
         $key = (string) $key;
 
@@ -63,6 +72,7 @@ class Encrypter implements EncrypterContract, StringEncrypter
 
         $this->key = $key;
         $this->cipher = $cipher;
+        $this->protobuf = $protobuf;
     }
 
     /**
@@ -103,31 +113,54 @@ class Encrypter implements EncrypterContract, StringEncrypter
      */
     public function encrypt(#[\SensitiveParameter] $value, $serialize = true)
     {
+        $encryptedField = null;
+        $tag = null; /* tag is not defined  - passed by reference to openssl_encrypt - is populated with a value for 'aead' ciphers */
+        $encodeData = 0;
+        if ($this->protobuf) {
+            $encryptedField = new EncryptedField();
+            $encodeData = OPENSSL_RAW_DATA;
+        }
         $iv = random_bytes(openssl_cipher_iv_length(strtolower($this->cipher)));
 
         $value = \openssl_encrypt(
             $serialize ? serialize($value) : $value,
-            strtolower($this->cipher), $this->key, 0, $iv, $tag
+            strtolower($this->cipher),
+            $this->key,
+            $options = $encodeData,
+            $iv,
+            $tag
         );
 
         if ($value === false) {
             throw new EncryptException('Could not encrypt the data.');
         }
 
-        $iv = base64_encode($iv);
-        $tag = base64_encode($tag ?? '');
+        if (!$this->protobuf) {
+            $iv = base64_encode($iv);
+            $tag = base64_encode($tag ?? '');
+        }
 
         $mac = self::$supportedCiphers[strtolower($this->cipher)]['aead']
             ? '' // For AEAD-algorithms, the tag / MAC is returned by openssl_encrypt...
             : $this->hash($iv, $value, $this->key);
 
-        $json = json_encode(compact('iv', 'value', 'mac', 'tag'), JSON_UNESCAPED_SLASHES);
+        if ($this->protobuf) {
+            $encryptedField->setValue($value);
+            $encryptedField->setIv($iv);
+            $encryptedField->setTag($tag ?? '');
+            $encryptedField->setMac($mac);
 
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new EncryptException('Could not encrypt the data.');
+            return $encryptedField->serializeToString();
+        } else {
+
+            $json = json_encode(compact('iv', 'value', 'mac', 'tag'), JSON_UNESCAPED_SLASHES);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new EncryptException('Could not encrypt the data.');
+            }
+
+            return base64_encode($json);
         }
-
-        return base64_encode($json);
     }
 
     /**
@@ -154,13 +187,24 @@ class Encrypter implements EncrypterContract, StringEncrypter
      */
     public function decrypt($payload, $unserialize = true)
     {
-        $payload = $this->getJsonPayload($payload);
+        if ($this->protobuf) {
+            $protoPayload = new EncryptedField();
+            $encode_data = OPENSSL_RAW_DATA;
+            $protoPayload->mergeFromString($payload);
+            $iv = $protoPayload->getIv();
+            $mac = $protoPayload->getMac();
+            $tag = empty($protoPayload->getTag()) ? null : $proto_payload->getTag();
+            $encryptedValue = $protoPayload->getValue();
+        } else {
+            $encode_data = 0;
+            $payload = $this->getJsonPayload($payload);
+            $iv = base64_decode($payload['iv']);
+            $tag = empty($payload['tag']) ? null : base64_decode($payload['tag']);
+            $mac = $payload['mac'];
+            $encryptedValue = $payload['value'];
+        }
 
-        $iv = base64_decode($payload['iv']);
-
-        $this->ensureTagIsValid(
-            $tag = empty($payload['tag']) ? null : base64_decode($payload['tag'])
-        );
+        $this->ensureTagIsValid($tag);
 
         $foundValidMac = false;
 
@@ -170,16 +214,25 @@ class Encrypter implements EncrypterContract, StringEncrypter
         foreach ($this->getAllKeys() as $key) {
             if (
                 $this->shouldValidateMac() &&
-                ! ($foundValidMac = $foundValidMac || $this->validMacForKey($payload, $key))
+                ! ($foundValidMac = $foundValidMac || ($this->protobuf ?
+                    $this->validMacForKey($encryptedValue, $iv, $mac, $key) :
+                    $this->validMacForKey($encryptedValue, $payload['iv'], $payload['mac'], $key)
+                )
+                )
             ) {
                 continue;
             }
 
-            $decrypted = \openssl_decrypt(
-                $payload['value'], strtolower($this->cipher), $key, 0, $iv, $tag ?? ''
+            $decryptedValue = \openssl_decrypt(
+                $encryptedValue,
+                strtolower($this->cipher),
+                $key,
+                $encode_data,
+                $iv,
+                $tag ?? ''
             );
 
-            if ($decrypted !== false) {
+            if ($decryptedValue !== false) {
                 break;
             }
         }
@@ -188,11 +241,11 @@ class Encrypter implements EncrypterContract, StringEncrypter
             throw new DecryptException('The MAC is invalid.');
         }
 
-        if (($decrypted ?? false) === false) {
+        if (($decryptedValue ?? false) === false) {
             throw new DecryptException('Could not decrypt the data.');
         }
 
-        return $unserialize ? unserialize($decrypted) : $decrypted;
+        return $unserialize ? unserialize($decryptedValue) : $decryptedValue;
     }
 
     /**
@@ -218,7 +271,7 @@ class Encrypter implements EncrypterContract, StringEncrypter
      */
     protected function hash(#[\SensitiveParameter] $iv, #[\SensitiveParameter] $value, #[\SensitiveParameter] $key)
     {
-        return hash_hmac('sha256', $iv.$value, $key);
+        return hash_hmac('sha256', $iv . $value, $key);
     }
 
     /**
@@ -255,21 +308,33 @@ class Encrypter implements EncrypterContract, StringEncrypter
      */
     protected function validPayload($payload)
     {
-        if (! is_array($payload)) {
-            return false;
-        }
-
-        foreach (['iv', 'value', 'mac'] as $item) {
-            if (! isset($payload[$item]) || ! is_string($payload[$item])) {
+        if (!$this->protobuf) {
+            if (! is_array($payload)) {
                 return false;
             }
-        }
 
-        if (isset($payload['tag']) && ! is_string($payload['tag'])) {
-            return false;
-        }
+            foreach (['iv', 'value', 'mac'] as $item) {
+                if (! isset($payload[$item]) || ! is_string($payload[$item])) {
+                    return false;
+                }
+            }
 
-        return strlen(base64_decode($payload['iv'], true)) === openssl_cipher_iv_length(strtolower($this->cipher));
+            if (isset($payload['tag']) && ! is_string($payload['tag'])) {
+                return false;
+            }
+
+            return strlen(base64_decode($payload['iv'], true)) === openssl_cipher_iv_length(strtolower($this->cipher));
+        } else {
+            // do not need to check for sstring because not base64 encoded
+            if (
+                null !== $payload->getIv() ||
+                null !== $payload->getValue() ||
+                null !== $payload->getMac()
+            ) {
+                return false;
+            }
+            return strlen($payload->getIv()) === openssl_cipher_iv_length(strtolower($this->cipher));
+        }
     }
 
     /**
@@ -280,20 +345,27 @@ class Encrypter implements EncrypterContract, StringEncrypter
      */
     protected function validMac(array $payload)
     {
-        return $this->validMacForKey($payload, $this->key);
+        if ($this->protobuf) {
+            return $this->validMacForKey($payload->getValue(), $payload->getIv(), $payload->getMac(), $this->key);
+        } else {
+            return $this->validMacForKey($payload['value'], $payload['iv'], $payload['mac'], $this->key);
+        }
     }
 
     /**
      * Determine if the MAC is valid for the given payload and key.
      *
-     * @param  array  $payload
+     * @param  bytes  $encryptedValue
+     * @param  bytes  $iv
+     * @param  bytes  $mac
      * @param  string  $key
      * @return bool
      */
-    protected function validMacForKey(#[\SensitiveParameter] $payload, $key)
+    protected function validMacForKey(#[\SensitiveParameter] $encryptedValue, #[\SensitiveParameter] $iv, #[\SensitiveParameter] $mac, $key)
     {
         return hash_equals(
-            $this->hash($payload['iv'], $payload['value'], $key), $payload['mac']
+            $this->hash($iv, $encryptedValue, $key),
+            $mac
         );
     }
 
@@ -373,5 +445,16 @@ class Encrypter implements EncrypterContract, StringEncrypter
         $this->previousKeys = $keys;
 
         return $this;
+    }
+
+    /**
+     * Return whether protobuf is being used instead of standard json with
+     * base64 encoding to serialize encrypted data.
+     *
+     * @return  bool
+     */
+    public function protobuf(): bool
+    {
+        return $this->protobuf;
     }
 }

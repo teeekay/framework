@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package Encapsulations;
+option php_namespace = "Encapsulations";
+
+message EncryptedField{
+    string mac = 1;
+    bytes iv = 2;
+    bytes tag = 3;
+    bytes value = 4;
+}

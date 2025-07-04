@@ -29,9 +29,9 @@ class EncryptionServiceProvider extends ServiceProvider
         $this->app->singleton('encrypter', function ($app) {
             $config = $app->make('config')->get('app');
 
-            return (new Encrypter($this->parseKey($config), $config['cipher']))
+            return (new Encrypter($this->parseKey($config), $config['cipher'], $config['encryption_with_protobuf']))
                 ->previousKeys(array_map(
-                    fn ($key) => $this->parseKey(['key' => $key]),
+                    fn($key) => $this->parseKey(['key' => $key]),
                     $config['previous_keys'] ?? []
                 ));
         });
