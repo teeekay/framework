@@ -12,12 +12,14 @@ use Orchestra\Testbench\TestCase;
 #[WithMigration]
 #[WithEnv('BCRYPT_ROUNDS', 12)]
 #[WithConfig('app.key', 'base64:IUHRqAQ99pZ0A1MPjbuv1D6ff3jxv0GIvS2qIW4JNU4=')]
+#[WithConfig('app.encryption_with_protobuf', false)]
 class RehashOnLogoutOtherDevicesTest extends TestCase
 {
     use RefreshDatabase;
 
     protected function defineRoutes($router)
     {
+
         $router->post('logout', function (Request $request) {
             auth()->logoutOtherDevices($request->input('password'));
 
@@ -42,5 +44,12 @@ class RehashOnLogoutOtherDevicesTest extends TestCase
         $user->refresh();
 
         $this->assertNotSame($password, $user->password);
+    }
+
+    public function testItRehashThePasswordUsingLogoutOtherDevicesWithProtobuf()
+    {
+        $this->app['config']->set('app.encryption_with_protobuf', true);
+
+        $this->testItRehashThePasswordUsingLogoutOtherDevices();
     }
 }

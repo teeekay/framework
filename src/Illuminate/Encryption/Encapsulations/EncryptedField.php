@@ -33,13 +33,13 @@ class EncryptedField extends \Google\Protobuf\Internal\Message
     /**
      * Constructor.
      *
-     * @param  array  $data {
+     * @param  array $data {
      *     Optional. Data for populating the Message object.
      *
-     *     @type  string  $mac
-     *     @type  string  $iv
-     *     @type  string  $tag
-     *     @type  string  $value
+     *     @type string $mac
+     *     @type string $iv
+     *     @type string $tag
+     *     @type string $value
      * }
      */
     public function __construct($data = NULL)
@@ -50,8 +50,7 @@ class EncryptedField extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>string mac = 1;</code>
-     *
-     * @return  string
+     * @return string
      */
     public function getMac()
     {
@@ -60,10 +59,8 @@ class EncryptedField extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>string mac = 1;</code>
-     *
-     * @param  string  $var
-     *
-     * @return  $this
+     * @param  string $var
+     * @return $this
      */
     public function setMac($var)
     {
@@ -75,8 +72,7 @@ class EncryptedField extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>bytes iv = 2;</code>
-     *
-     * @return  string
+     * @return string
      */
     public function getIv()
     {
@@ -85,9 +81,8 @@ class EncryptedField extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>bytes iv = 2;</code>
-     *
-     * @param  string  $var
-     * @return  $this
+     * @param  string $var
+     * @return $this
      */
     public function setIv($var)
     {
@@ -99,8 +94,7 @@ class EncryptedField extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>bytes tag = 3;</code>
-     *
-     * @return  string
+     * @return string
      */
     public function getTag()
     {
@@ -109,9 +103,8 @@ class EncryptedField extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>bytes tag = 3;</code>
-     *
-     * @param  string  $var
-     * @return  $this
+     * @param  string $var
+     * @return $this
      */
     public function setTag($var)
     {
@@ -123,8 +116,7 @@ class EncryptedField extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>bytes value = 4;</code>
-     *
-     * @return  string
+     * @return string
      */
     public function getValue()
     {
@@ -133,9 +125,8 @@ class EncryptedField extends \Google\Protobuf\Internal\Message
 
     /**
      * Generated from protobuf field <code>bytes value = 4;</code>
-     *
-     * @param  string  $var
-     * @return  $this
+     * @param  string $var
+     * @return $this
      */
     public function setValue($var)
     {

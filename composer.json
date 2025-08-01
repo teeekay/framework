@@ -147,7 +147,7 @@
             "src/Illuminate/Support/helpers.php"
         ],
         "psr-4": {
-            "Encapsulations\\": "src/Illuminate/Encryption/Protos/Encapsulations/",
+            "Encapsulations\\": "src/Illuminate/Encryption/Encapsulations/",
             "GPBMetadata\\": "src/Illuminate/Encryption/Protos/GPBMetadata/",
             "Illuminate\\": "src/Illuminate/",
             "Illuminate\\Support\\": [

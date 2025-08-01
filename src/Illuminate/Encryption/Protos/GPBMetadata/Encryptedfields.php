@@ -8,26 +8,25 @@ class Encryptedfields
 {
     public static $is_initialized = false;
 
-    public static function initOnce()
-    {
+    public static function initOnce() {
         $pool = \Google\Protobuf\Internal\DescriptorPool::getGeneratedPool();
 
         if (static::$is_initialized == true) {
-            return;
+          return;
         }
         $pool->internalAddGeneratedFile(
             '
-ï¿½
+‰
 encryptedfields.protoEncapsulations"E
 EncryptedField
 mac (	
 
 iv (
 tag (
-value (Bï¿½Encapsulationsbproto3',
-            true
-        );
+value (BÊEncapsulationsbproto3'
+        , true);
 
         static::$is_initialized = true;
     }
 }
+
