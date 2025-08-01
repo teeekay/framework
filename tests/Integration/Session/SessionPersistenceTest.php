@@ -31,6 +31,12 @@ class SessionPersistenceTest extends TestCase
         $this->assertTrue($handler->written);
     }
 
+    public function testSessionIsPersistedEvenIfExceptionIsThrownFromRouteWithProtobuf()
+    {
+        $this->app['config']->set('app.encryption_with_protobuf', true);
+        $this->testSessionIsPersistedEvenIfExceptionIsThrownFromRoute();
+    }
+
     protected function defineEnvironment($app)
     {
         $app->instance(
@@ -43,6 +49,7 @@ class SessionPersistenceTest extends TestCase
         $app['config']->set('app.key', Str::random(32));
         $app['config']->set('session.driver', 'fake-null');
         $app['config']->set('session.expire_on_close', true);
+        $app['config']->set('app.encryption_with_protobuf', false);
     }
 }
 

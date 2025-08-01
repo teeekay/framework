@@ -10,7 +10,7 @@ class CookieSessionHandlerTest extends TestCase
 {
     public function testCookieSessionDriverCookiesCanExpireOnClose()
     {
-        Route::get('/', fn () => '')->middleware('web');
+        Route::get('/', fn() => '')->middleware('web');
 
         $response = $this->get('/');
         $sessionIdCookie = $response->getCookie('laravel_session');
@@ -22,7 +22,7 @@ class CookieSessionHandlerTest extends TestCase
 
     public function testCookieSessionInheritsRequestSecureState()
     {
-        Route::get('/', fn () => '')->middleware('web');
+        Route::get('/', fn() => '')->middleware('web');
 
         $unsecureResponse = $this->get('/');
         $unsecureSessionIdCookie = $unsecureResponse->getCookie('laravel_session');
@@ -39,10 +39,23 @@ class CookieSessionHandlerTest extends TestCase
         $this->assertTrue($secureSessionValueCookie->isSecure());
     }
 
+    public function testCookieSessionDriverCookiesCanExpireOnCloseWithProtobuf()
+    {
+        $this->app['config']->set('app.encryption_with_protobuf', true);
+        $this->testCookieSessionDriverCookiesCanExpireOnClose();
+    }
+
+    public function testCookieSessionInheritsRequestSecureStateWithProtobuf()
+    {
+        $this->app['config']->set('app.encryption_with_protobuf', true);
+        $this->testCookieSessionInheritsRequestSecureState();
+    }
+
     protected function defineEnvironment($app)
     {
         $app['config']->set('app.key', Str::random(32));
         $app['config']->set('session.driver', 'cookie');
         $app['config']->set('session.expire_on_close', true);
+        $app['config']->set('app.encryption_with_protobuf', false);
     }
 }
