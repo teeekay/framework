@@ -42,6 +42,13 @@ class CookieTest extends TestCase
         $this->assertEquals(Carbon::now()->getTimestamp() + 60, $response->headers->getCookies()[1]->getExpiresTime());
     }
 
+    public function test_cookies_with_protobuf()
+    {
+        $this->app['config']->set('app.encryption_with_protobuf', true);
+        $this->test_cookie_is_sent_back_with_proper_expire_time_when_should_expire_on_close();
+        $this->test_cookie_is_sent_back_with_proper_expire_time_with_respect_to_lifetime();
+    }
+
     protected function defineEnvironment($app)
     {
         $app->instance(
@@ -53,6 +60,7 @@ class CookieTest extends TestCase
 
         $app['config']->set('app.key', Str::random(32));
         $app['config']->set('session.driver', 'fake-null');
+        $app['config']->set('app.encryption_with_protobuf', false);
 
         Session::extend('fake-null', function () {
             return new NullSessionHandler;
