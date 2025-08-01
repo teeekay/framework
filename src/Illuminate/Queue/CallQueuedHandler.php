@@ -59,7 +59,8 @@ class CallQueuedHandler
     {
         try {
             $command = $this->setJobInstanceIfNecessary(
-                $job, $this->getCommand($data)
+                $job,
+                $this->getCommand($data)
             );
         } catch (ModelNotFoundException $e) {
             return $this->handleModelNotFound($job, $e);
@@ -96,7 +97,11 @@ class CallQueuedHandler
         }
 
         if ($this->container->bound(Encrypter::class)) {
-            return unserialize($this->container[Encrypter::class]->decrypt($data['command']));
+            if ($this->container[Encrypter::class]->protobuf()) {
+                return unserialize($this->container[Encrypter::class]->decrypt(base64_decode($data['command'], true)));
+            } else {
+                return unserialize($this->container[Encrypter::class]->decrypt($data['command']));
+            }
         }
 
         throw new RuntimeException('Unable to extract job payload.');
@@ -112,7 +117,7 @@ class CallQueuedHandler
     protected function dispatchThroughMiddleware(Job $job, $command)
     {
         if ($command instanceof \__PHP_Incomplete_Class) {
-            throw new Exception('Job is incomplete class: '.json_encode($command));
+            throw new Exception('Job is incomplete class: ' . json_encode($command));
         }
 
         return (new Pipeline($this->container))->send($command)
@@ -123,7 +128,8 @@ class CallQueuedHandler
                 }
 
                 return $this->dispatcher->dispatchNow(
-                    $command, $this->resolveHandler($job, $command)
+                    $command,
+                    $this->resolveHandler($job, $command)
                 );
             });
     }
@@ -185,8 +191,10 @@ class CallQueuedHandler
     {
         $uses = class_uses_recursive($command);
 
-        if (! in_array(Batchable::class, $uses) ||
-            ! in_array(InteractsWithQueue::class, $uses)) {
+        if (
+            ! in_array(Batchable::class, $uses) ||
+            ! in_array(InteractsWithQueue::class, $uses)
+        ) {
             return;
         }
 
@@ -246,8 +254,10 @@ class CallQueuedHandler
      */
     protected function ensureUniqueJobLockIsReleasedViaContext()
     {
-        if (! $this->container->bound(ContextRepository::class) ||
-            ! $this->container->bound(CacheFactory::class)) {
+        if (
+            ! $this->container->bound(ContextRepository::class) ||
+            ! $this->container->bound(CacheFactory::class)
+        ) {
             return;
         }
 

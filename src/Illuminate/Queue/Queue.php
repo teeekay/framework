@@ -119,7 +119,8 @@ abstract class Queue
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new InvalidPayloadException(
-                'Unable to JSON encode payload. Error ('.json_last_error().'): '.json_last_error_msg(), $value
+                'Unable to JSON encode payload. Error (' . json_last_error() . '): ' . json_last_error_msg(),
+                $value
             );
         }
 
@@ -168,7 +169,11 @@ abstract class Queue
         ]);
 
         $command = $this->jobShouldBeEncrypted($job) && $this->container->bound(Encrypter::class)
-            ? $this->container[Encrypter::class]->encrypt(serialize(clone $job))
+            ? (
+                $this->container[Encrypter::class]->protobuf()
+                ? base64_encode($this->container[Encrypter::class]->encrypt(serialize(clone $job)))
+                : $this->container[Encrypter::class]->encrypt(serialize(clone $job))
+            )
             : serialize(clone $job);
 
         return array_merge($payload, [
@@ -228,7 +233,7 @@ abstract class Queue
         }
 
         return Collection::wrap($backoff)
-            ->map(fn ($backoff) => $backoff instanceof DateTimeInterface ? $this->secondsUntil($backoff) : $backoff)
+            ->map(fn($backoff) => $backoff instanceof DateTimeInterface ? $this->secondsUntil($backoff) : $backoff)
             ->implode(',');
     }
 
@@ -335,8 +340,10 @@ abstract class Queue
      */
     protected function enqueueUsing($job, $payload, $queue, $delay, $callback)
     {
-        if ($this->shouldDispatchAfterCommit($job) &&
-            $this->container->bound('db.transactions')) {
+        if (
+            $this->shouldDispatchAfterCommit($job) &&
+            $this->container->bound('db.transactions')
+        ) {
             if ($job instanceof ShouldBeUnique) {
                 $this->container->make('db.transactions')->addCallbackForRollback(
                     function () use ($job) {
