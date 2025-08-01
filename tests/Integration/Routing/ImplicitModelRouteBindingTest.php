@@ -14,6 +14,7 @@ use Orchestra\Testbench\Concerns\InteractsWithPublishedFiles;
 use Orchestra\Testbench\TestCase;
 
 #[WithConfig('app.key', 'AckfSECXIvnK5r28GVIWUAxmbBSjTsmF')]
+#[WithConfig('app.encryption_with_protobuf', false)]
 class ImplicitModelRouteBindingTest extends TestCase
 {
     use InteractsWithPublishedFiles;
@@ -299,6 +300,65 @@ PHP);
 
         $response = $this->getJson("/post/{$post->id}/tag-slug/{$tag->slug}");
         $response->assertJsonFragment(['id' => $tag->id]);
+    }
+
+    public function testWithRouteCachingEnabledWithProtobuf()
+    {
+        $this->app['config']->set('app.encryption_with_protobuf', true);
+        $this->testWithRouteCachingEnabled();
+    }
+
+    public function testWithoutRouteCachingEnabledWithProtobuf()
+    {
+        $this->app['config']->set('app.encryption_with_protobuf', true);
+        $this->testWithoutRouteCachingEnabled();
+    }
+    public function testSoftDeletedModelsAreNotRetrievedWithProtobuf()
+    {
+        $this->app['config']->set('app.encryption_with_protobuf', true);
+        $this->testSoftDeletedModelsAreNotRetrieved();
+    }
+
+    public function testSoftDeletedModelsCanBeRetrievedUsingWithTrashedMethodWithProtobuf()
+    {
+        $this->app['config']->set('app.encryption_with_protobuf', true);
+        $this->testSoftDeletedModelsCanBeRetrievedUsingWithTrashedMethod();
+    }
+
+    public function testEnforceScopingImplicitRouteBindingsWithProtobuf()
+    {
+        $this->app['config']->set('app.encryption_with_protobuf', true);
+        $this->testEnforceScopingImplicitRouteBindings();
+    }
+
+    public function testEnforceScopingImplicitRouteBindingsWithTrashedAndChildWithNoSoftDeleteTraitWithProtobuf()
+    {
+        $this->app['config']->set('app.encryption_with_protobuf', true);
+        $this->testEnforceScopingImplicitRouteBindingsWithTrashedAndChildWithNoSoftDeleteTrait();
+    }
+
+    public function testEnforceScopingImplicitRouteBindingsWithRouteCachingEnabledWithProtobuf()
+    {
+        $this->app['config']->set('app.encryption_with_protobuf', true);
+        $this->testEnforceScopingImplicitRouteBindingsWithRouteCachingEnabled();
+    }
+
+    public function testWithoutEnforceScopingImplicitRouteBindingsWithProtobuf()
+    {
+        $this->app['config']->set('app.encryption_with_protobuf', true);
+        $this->testWithoutEnforceScopingImplicitRouteBindings();
+    }
+
+    public function testImplicitRouteBindingChildHasUuidsWithProtobuf()
+    {
+        $this->app['config']->set('app.encryption_with_protobuf', true);
+        $this->testImplicitRouteBindingChildHasUuids();
+    }
+
+    public function testImplicitRouteBindingChildHasUlidsWithProtobuf()
+    {
+        $this->app['config']->set('app.encryption_with_protobuf', true);
+        $this->testImplicitRouteBindingChildHasUlids();
     }
 }
 

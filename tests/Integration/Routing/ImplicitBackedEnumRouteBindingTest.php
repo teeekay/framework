@@ -10,6 +10,7 @@ class ImplicitBackedEnumRouteBindingTest extends TestCase
     protected function defineEnvironment($app): void
     {
         $app['config']->set(['app.key' => 'AckfSECXIvnK5r28GVIWUAxmbBSjTsmF']);
+        $app['config']->set('app.encryption_with_protobuf', false);
     }
 
     public function testWithRouteCachingEnabled()
@@ -59,7 +60,7 @@ PHP);
             return $category->value;
         })->middleware('web');
 
-        Route::bind('categoryCode', fn (string $categoryCode) => CategoryBackedEnum::fromCode($categoryCode) ?? abort(404));
+        Route::bind('categoryCode', fn(string $categoryCode) => CategoryBackedEnum::fromCode($categoryCode) ?? abort(404));
 
         Route::post('/categories-code/{categoryCode}', function (CategoryBackedEnum $categoryCode) {
             return $categoryCode->value;
@@ -91,5 +92,17 @@ PHP);
 
         $response = $this->post('/categories-code/00');
         $response->assertNotFound();
+    }
+
+    public function testWithRouteCachingEnabledWithProtobuf()
+    {
+        $this->app['config']->set('app.encryption_with_protobuf', true);
+        $this->testWithRouteCachingEnabled();
+    }
+
+    public function testWithoutRouteCachingEnabledWithProtobuf()
+    {
+        $this->app['config']->set('app.encryption_with_protobuf', true);
+        $this->testWithoutRouteCachingEnabled();
     }
 }
