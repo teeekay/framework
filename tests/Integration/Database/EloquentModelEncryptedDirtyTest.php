@@ -69,6 +69,23 @@ class EloquentModelEncryptedDirtyTest extends TestCase
         $this->assertTrue($model->isDirty('secret'));
         $this->assertTrue($model->isDirty('secret_array_object'));
     }
+
+    public function testDirtyAttributeBehaviorWithNoPreviousKeysWithProtobuf()
+    {
+        $this->app['config']->set('app.encryption_with_protobuf', true);
+        $this->testDirtyAttributeBehaviorWithNoPreviousKeys();
+    }
+
+    public function testDirtyAttributeBehaviorWithPreviousKeysWithProtobuf()
+    {
+        $this->app['config']->set('app.encryption_with_protobuf', true);
+        $this->testDirtyAttributeBehaviorWithPreviousKeys();
+    }
+
+    protected function defineEnvironment($app)
+    {
+        $app['config']->set('app.encryption_with_protobuf', false);
+    }
 }
 
 /**
