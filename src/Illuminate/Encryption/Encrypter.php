@@ -193,7 +193,7 @@ class Encrypter implements EncrypterContract, StringEncrypter
             $protoPayload->mergeFromString($payload);
             $iv = $protoPayload->getIv();
             $mac = $protoPayload->getMac();
-            $tag = empty($protoPayload->getTag()) ? null : $proto_payload->getTag();
+            $tag = empty($protoPayload->getTag()) ? null : $protoPayload->getTag();
             $encryptedValue = $protoPayload->getValue();
         } else {
             $encode_data = 0;
